@@ -95,7 +95,7 @@ def optimize_portfolio(
             [port_val, prices_SPY], keys=["Portfolio", "SPY"], axis=1  		  	   		  	  		  		  		    	 		 		   		 		  
         )
         plot_data(df_temp)
-
+        plt.shw()
   		  	   		  	  		  		  		    	 		 		   		 		  
     return allocs, cr, adr, sddr, sr
 
