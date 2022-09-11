@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from optimization import plot_data
 
 sd = dt.datetime(2008, 1, 1)
-ed = dt.datetime(2009, 1, 1)
+ed = dt.datetime(2014, 1, 1)
 syms=["GOOG", "AAPL", "GLD", "XOM"]
 #gen_plot=False,
 
@@ -70,9 +70,9 @@ allocs = np.full((len(syms)), 1 / len(syms))
 
 normed = prices/prices.iloc[0]
 alloced = normed*allocs
+port_val = alloced.sum(axis = 1)
 
-
-
+daily_ret =  (port_val/port_val.shift(1))-1
 
 
 cr, adr, sddr, sr = [ #cr is cumulative returs, adr is average daily returns, sddr is standard daily returns
@@ -82,19 +82,20 @@ cr, adr, sddr, sr = [ #cr is cumulative returs, adr is average daily returns, sd
     0.0005,
     2.1,
 ]  # add code here to compute stats
+cr = (port_val[-1]/port_val[0])-1
+adr = np.mean(daily_ret)
+sddr = np.std(daily_ret)
+sr = adr/sddr*np.sqrt(252)
+
+prices_SPY = prices_SPY/prices_SPY[0]
+df_temp = pd.concat(
+            [port_val, prices_SPY], keys=["Portfolio", "SPY"], axis=1
+        )
+plot_data(df_temp)
+plt.show()
 
 
-# Get daily portfolio value
-port_val = prices_SPY  # add code here to compute daily portfolio values
 
 
 
-# Compare daily portfolio value with SPY using a normalized plot
-# if gen_plot:
-#     # add code to plot here
-#     df_temp = pd.concat(
-#         [port_val, prices_SPY], keys=["Portfolio", "SPY"], axis=1
-#     )
-#     plot_data(df_temp)
-#
-# return allocs, cr, adr, sddr, sr
+
