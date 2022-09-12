@@ -4,6 +4,8 @@ import numpy as np
 from util import get_data
 import matplotlib.pyplot as plt
 from optimization import plot_data
+from scipy.optimize import minimize, Bounds
+
 
 sd = dt.datetime(2008, 1, 1)
 ed = dt.datetime(2014, 1, 1)
@@ -66,13 +68,11 @@ dates = pd.date_range(start = sd, end = ed)
 prices_all = get_data(syms, dates)  # automatically adds SPY
 prices = prices_all[syms]  # only portfolio symbols
 prices_SPY = prices_all["SPY"]  # only SPY, for comparison late
+
 allocs = np.full((len(syms)), 1 / len(syms))
 
-normed = prices/prices.iloc[0]
-alloced = normed*allocs
-port_val = alloced.sum(axis = 1)
 
-daily_ret =  (port_val/port_val.shift(1))-1
+
 
 
 cr, adr, sddr, sr = [ #cr is cumulative returs, adr is average daily returns, sddr is standard daily returns
@@ -82,20 +82,38 @@ cr, adr, sddr, sr = [ #cr is cumulative returs, adr is average daily returns, sd
     0.0005,
     2.1,
 ]  # add code here to compute stats
-cr = (port_val[-1]/port_val[0])-1
-adr = np.mean(daily_ret)
-sddr = np.std(daily_ret)
-sr = adr/sddr*np.sqrt(252)
+
 
 prices_SPY = prices_SPY/prices_SPY[0]
 df_temp = pd.concat(
-            [port_val, prices_SPY], keys=["Portfolio", "SPY"], axis=1
+           [port_val, prices_SPY], keys=["Portfolio", "SPY"], axis=1
         )
 plot_data(df_temp)
 plt.show()
 
 
+def f(allocations,prices):
 
 
+    normed = prices / prices.iloc[0]
+    alloced = normed * allocations
+    port_val = alloced.sum(axis=1)
+    daily_ret = (port_val / port_val.shift(1)) - 1
+    adr = np.mean(daily_ret)
+    sddr = np.std(daily_ret)
+    sr = adr/sddr*np.sqrt(252)
+
+    return -sr
+
+print (f(allocs,prices))
 
 
+alloc_bounds = Bounds(0,1)
+constraints = { 'type': 'eq', 'fun': lambda allocs: 1 - np.sum(allocs)}, { 'type': 'ineq', 'fun': lambda sr: sr+5}
+
+minimize(f, x0 = allocs, args= prices, method='SLSQP', bounds = alloc_bounds, constraints = constraints )
+
+test = minimize(f, x0 = allocs, args= prices, method='SLSQP', bounds = alloc_bounds, constraints = constraints )
+
+print(sum(test.x))
+print(test.fun)

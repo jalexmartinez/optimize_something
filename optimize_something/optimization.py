@@ -34,11 +34,26 @@ import numpy as np
 import matplotlib.pyplot as plt  		  	   		  	  		  		  		    	 		 		   		 		  
 import pandas as pd  		  	   		  	  		  		  		    	 		 		   		 		  
 from util import get_data
-  		  	   		  	  		  		  		    	 		 		   		 		  
+from scipy.optimize import minimize, Bounds
+
   		  	   		  	  		  		  		    	 		 		   		 		  
 # This is the function that will be tested by the autograder  		  	   		  	  		  		  		    	 		 		   		 		  
 # The student must update this code to properly implement the functionality  		  	   		  	  		  		  		    	 		 		   		 		  
-def optimize_portfolio(  		  	   		  	  		  		  		    	 		 		   		 		  
+def f(allocations,prices):
+
+
+    normed = prices / prices.iloc[0]
+    alloced = normed * allocations
+    port_val = alloced.sum(axis=1)
+    daily_ret = (port_val / port_val.shift(1)) - 1
+    adr = np.mean(daily_ret)
+    sddr = np.std(daily_ret)
+    sr = adr/sddr*np.sqrt(252)
+
+    return -sr
+
+
+def optimize_portfolio(
     sd=dt.datetime(2008, 1, 1),  		  	   		  	  		  		  		    	 		 		   		 		  
     ed=dt.datetime(2009, 1, 1),  		  	   		  	  		  		  		    	 		 		   		 		  
     syms=["GOOG", "AAPL", "GLD", "XOM"],  		  	   		  	  		  		  		    	 		 		   		 		  
@@ -76,6 +91,16 @@ def optimize_portfolio(
     # note that the values here ARE NOT meant to be correct for a test case  		  	   		  	  		  		  		    	 		 		   		 		  
     allocs = np.full((len(syms)), 1 / len(syms))
     normed = prices / prices.iloc[0]
+
+    alloc_bounds = Bounds(0, 1)
+    constraints = {'type': 'eq', 'fun': lambda allocs: 1 - np.sum(allocs)}, {'type': 'ineq', 'fun': lambda sr: sr + 5}
+
+    minimize(f, x0=allocs, args=normed, method='SLSQP', bounds=alloc_bounds, constraints=constraints)
+
+    solution = minimize(f, x0=allocs, args=prices, method='SLSQP', bounds=alloc_bounds, constraints=constraints)
+    allocs = solution.x
+    sr = solution.fun
+
     alloced = normed * allocs
     port_val = alloced.sum(axis=1)
 
@@ -83,21 +108,19 @@ def optimize_portfolio(
     cr = (port_val[-1] / port_val[0]) - 1
     adr = np.mean(daily_ret)
     sddr = np.std(daily_ret)
-    sr = adr / sddr * np.sqrt(252)
-
 
     prices_SPY = prices_SPY / prices_SPY[0]
   		  	   		  	  		  		  		    	 		 		   		 		  
     # Compare daily portfolio value with SPY using a normalized plot  		  	   		  	  		  		  		    	 		 		   		 		  
-    if gen_plot:  		  	   		  	  		  		  		    	 		 		   		 		  
+    if gen_plot == True:
         # add code to plot here  		  	   		  	  		  		  		    	 		 		   		 		  
         df_temp = pd.concat(  		  	   		  	  		  		  		    	 		 		   		 		  
             [port_val, prices_SPY], keys=["Portfolio", "SPY"], axis=1  		  	   		  	  		  		  		    	 		 		   		 		  
         )
-        plot_data(df_temp)
-        plt.shw()
+        plot_data(df_temp, title = "Daily Portfolio Value and SPY")
+
   		  	   		  	  		  		  		    	 		 		   		 		  
-    return allocs, cr, adr, sddr, sr
+    return allocs, cr, adr, sddr, -sr
 
 
 def plot_data(df, title="Stock prices", xlabel="Date", ylabel="Price"):
@@ -107,16 +130,16 @@ def plot_data(df, title="Stock prices", xlabel="Date", ylabel="Price"):
     ax = df.plot(title=title, fontsize=12)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    plt.show()
+    plt.savefig('./images/Figure1.png')
 
 def test_code():  		  	   		  	  		  		  		    	 		 		   		 		  
     """  		  	   		  	  		  		  		    	 		 		   		 		  
     This function WILL NOT be called by the auto grader.  		  	   		  	  		  		  		    	 		 		   		 		  
     """  		  	   		  	  		  		  		    	 		 		   		 		  
   		  	   		  	  		  		  		    	 		 		   		 		  
-    start_date = dt.datetime(2009, 1, 1)  		  	   		  	  		  		  		    	 		 		   		 		  
-    end_date = dt.datetime(2014, 1, 1)
-    symbols = ["GOOG", "AAPL", "GLD", "XOM", "IBM"]  		  	   		  	  		  		  		    	 		 		   		 		  
+    start_date = dt.datetime(2008, 6, 1)
+    end_date = dt.datetime(2009, 6, 1)
+    symbols = ['IBM', 'X', 'GLD', 'JPM']
   		  	   		  	  		  		  		    	 		 		   		 		  
     # Assess the portfolio  		  	   		  	  		  		  		    	 		 		   		 		  
     allocations, cr, adr, sddr, sr = optimize_portfolio(  		  	   		  	  		  		  		    	 		 		   		 		  
@@ -132,9 +155,11 @@ def test_code():
     print(f"Volatility (stdev of daily returns): {sddr}")  		  	   		  	  		  		  		    	 		 		   		 		  
     print(f"Average Daily Return: {adr}")  		  	   		  	  		  		  		    	 		 		   		 		  
     print(f"Cumulative Return: {cr}")  		  	   		  	  		  		  		    	 		 		   		 		  
-  		  	   		  	  		  		  		    	 		 		   		 		  
+    print(f"Sum of Allocations: {sum(allocations)}")
   		  	   		  	  		  		  		    	 		 		   		 		  
 if __name__ == "__main__":  		  	   		  	  		  		  		    	 		 		   		 		  
     # This code WILL NOT be called by the auto grader  		  	   		  	  		  		  		    	 		 		   		 		  
     # Do not assume that it will be called  		  	   		  	  		  		  		    	 		 		   		 		  
-    test_code()  		  	   		  	  		  		  		    	 		 		   		 		  
+    test_code()
+    allocs, cr, adr, sddr, sr = optimize_portfolio(sd=dt.datetime(2008, 6, 1), ed=dt.datetime(2009, 6, 1),
+                        syms=['IBM', 'X', 'GLD', 'JPM'], gen_plot=True)
